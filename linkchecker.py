@@ -16,8 +16,8 @@ class STDErrorWriter():
 class LinkCheckerParser(scrapy.Spider):
     name = 'linkchecker'
     max_pages = 20
-    start_urls = ['https://less.works/']
-    #start_urls = ['http://localhost:3000/']
+    #start_urls = ['https://less.works/']
+    start_urls = ['http://localhost:3000/']
     custom_settings = {
         'HTTPERROR_ALLOW_ALL': True
     }
@@ -35,9 +35,7 @@ class LinkCheckerParser(scrapy.Spider):
         for uri in list(self._css_links(response)) + list(self._html_links(response)):
             next_page = response.urljoin(uri)
             if self.start_urls[0] in next_page:
-                if (self.max_pages > 0):
-                    self.max_pages -= 1
-                    yield scrapy.Request(next_page, method="HEAD", callback=lambda r: self.parse(r, response.url))
+                yield scrapy.Request(next_page, method="HEAD", callback=lambda r: self.parse(r, response.url))
 
     def _css_links(self, response):
         if 'text/css' not in self._content_type(response):
