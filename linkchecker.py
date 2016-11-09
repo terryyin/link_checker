@@ -16,8 +16,8 @@ class STDErrorWriter():
 class LinkCheckerParser(scrapy.Spider):
     name = 'linkchecker'
     max_pages = 20
-    #start_urls = ['https://less.works/']
-    start_urls = ['http://localhost:3000/']
+    start_urls = ['https://less.works/']
+    #start_urls = ['http://localhost:3000/']
     custom_settings = {
         'HTTPERROR_ALLOW_ALL': True
     }
