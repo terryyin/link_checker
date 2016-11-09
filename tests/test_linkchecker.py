@@ -152,8 +152,3 @@ def test_a_html_with_embedded_css(spider, html_resp_builder):
     requests = [_ for _ in spider.parse(response)]
     assert len(requests) == 1
 
-# no downloading images
-# redirect
-# external
-
-

@@ -1,11 +1,15 @@
+"""
+Link checker for Less.works
+"""
 from __future__ import print_function
+import re
 import sys
 import scrapy
-from scrapy.commands import runspider
 import optparse
+from scrapy.commands import runspider
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
-import re
+
 
 class STDErrorWriter():
     return_code = 0
@@ -13,12 +17,14 @@ class STDErrorWriter():
         print( text, file=sys.stderr)
         STDErrorWriter.return_code = 2
 
+
 class LinkCheckerParser(scrapy.Spider):
     name = 'linkchecker'
     max_pages = 20
     start_urls = ['https://less.works/']
     #start_urls = ['http://localhost:3000/']
     custom_settings = {
+        'USER_AGENT': "Mozilla/5.0 (Windows; U; Windows NT 5.1; de; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3",
         'HTTPERROR_ALLOW_ALL': True
     }
 
@@ -27,26 +33,43 @@ class LinkCheckerParser(scrapy.Spider):
         self.error_writer = error_writer
 
     def parse(self, response, parent=None):
+        bot = LinkCheckerBot(response, self.start_urls[0])
         if response.status // 100 != 2:
             self.error_writer("{response.url}, status: {response.status}, parent: {parent}".format(response=response, parent=parent))
         else:
-            if response.request.method == "HEAD" and 'text' in self._content_type(response):
+            if bot.is_unfetched_text():
                 yield scrapy.Request(response.url, method="GET", callback=lambda r: self.parse(r, parent))
-        for uri in list(self._css_links(response)) + list(self._html_links(response)):
-            next_page = response.urljoin(uri)
-            if self.start_urls[0] in next_page:
-                yield scrapy.Request(next_page, method="HEAD", callback=lambda r: self.parse(r, response.url))
+        for next_page in bot.all_links():
+            yield scrapy.Request(next_page, method="HEAD", callback=lambda r: self.parse(r, response.url))
 
-    def _css_links(self, response):
-        if 'text/css' not in self._content_type(response):
+
+class LinkCheckerBot:
+    def __init__(self, response, start_url):
+        self.response = response
+        self.start_url = start_url
+
+    def all_links(self):
+        for uri in list(self._css_links()) + list(self._html_links()):
+            next_page = self.response.urljoin(uri)
+            if self._in_scope(self.response.url, next_page):
+                yield next_page
+
+    def is_unfetched_text(self):
+        return self.response.request.method == "HEAD" and 'text' in self._content_type()
+
+    def _in_scope(self, current_page, next_page):
+        return self.start_url in next_page
+
+    def _css_links(self):
+        if 'text/css' not in self._content_type():
             return
-        for link in self._find_all_links_in_css(response.text):
+        for link in self._find_all_links_in_css(self.response.text):
             yield link
 
-    def _html_links(self, response):
-        for uri in response.css('::attr("href")') + response.css('::attr("src")'):
+    def _html_links(self):
+        for uri in self.response.css('::attr("href")') + self.response.css('::attr("src")'):
             yield uri.extract()
-        for style in response.css('style'):
+        for style in self.response.css('style'):
             for link in self._find_all_links_in_css(style.extract()):
                 yield link
 
@@ -54,13 +77,12 @@ class LinkCheckerParser(scrapy.Spider):
         for m in re.finditer(r"url\(\s*.(.*).\s*\)", content):
             yield m.group(1)
 
-    def _content_type(self, response):
-        return ''.join(str(x) for x in response.headers.getlist("content-type"))
+    def _content_type(self):
+        return ''.join(str(x) for x in self.response.headers.getlist("content-type"))
 
-def execute(argv=None, settings=None):
-    if settings is None:
-        settings = get_project_settings()
 
+def execute(argv):
+    settings = get_project_settings()
     parser = optparse.OptionParser(formatter=optparse.TitledHelpFormatter(), \
         conflict_handler='resolve')
     cmd = runspider.Command()
@@ -75,6 +97,6 @@ def execute(argv=None, settings=None):
     crawler_process.start()
     return STDErrorWriter.return_code
 
+
 if __name__ == '__main__':
     sys.exit(execute(['scrapy', 'runspider', '--nolog']))
-
