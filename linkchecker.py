@@ -34,13 +34,24 @@ class LinkCheckerParser(scrapy.Spider):
 
     def parse(self, response, parent=None):
         bot = LinkCheckerBot(response, self.start_urls[0])
-        if response.status // 100 != 2:
-            self.error_writer("{response.url}, status: {response.status}, parent: {parent}".format(response=response, parent=parent))
+        # linkedin and amazon don't allow HEAD requests
+        if response.status == 405:
+            yield scrapy.Request(response.url, method="GET", callback=lambda r: self.parse_405(r, parent))
+        elif response.status // 100 != 2:
+            self._error(response, parent=parent)
         else:
-            if bot.is_unfetched_text():
+            if bot.is_unfetched_text() and bot.is_internal_link(response.url):
                 yield scrapy.Request(response.url, method="GET", callback=lambda r: self.parse(r, parent))
         for next_page in bot.all_links():
             yield scrapy.Request(next_page, method="HEAD", callback=lambda r: self.parse(r, response.url))
+
+    def parse_405(self, response, parent=None):
+        if response.status // 100 != 2:
+            self._error(response, parent=parent)
+
+    def _error(self, response, parent=None):
+        self.error_writer("{rsp.url}, status: {rsp.status}, parent: {parent}".format(
+            rsp=response, parent=parent))
 
 
 class LinkCheckerBot:
@@ -51,13 +62,12 @@ class LinkCheckerBot:
     def all_links(self):
         for uri in list(self._css_links()) + list(self._html_links()):
             next_page = self.response.urljoin(uri)
-            if self._in_scope(self.response.url, next_page):
-                yield next_page
+            yield next_page
 
     def is_unfetched_text(self):
         return self.response.request.method == "HEAD" and 'text' in self._content_type()
 
-    def _in_scope(self, current_page, next_page):
+    def is_internal_link(self, next_page):
         return self.start_url in next_page
 
     def _css_links(self):
@@ -83,8 +93,8 @@ class LinkCheckerBot:
 
 def execute(argv):
     settings = get_project_settings()
-    parser = optparse.OptionParser(formatter=optparse.TitledHelpFormatter(), \
-        conflict_handler='resolve')
+    parser = optparse.OptionParser(formatter=optparse.TitledHelpFormatter(),
+                                   conflict_handler='resolve')
     cmd = runspider.Command()
     settings.setdict(cmd.default_settings, priority='command')
     cmd.settings = settings

@@ -26,10 +26,6 @@ def spider():
     writer = ErrorWriterForTest()
     return LinkCheckerParser(writer)
 
-@pytest.fixture
-def external_spider():
-    writer = ErrorWriterForTest()
-    return ExternalLinkCheckerParser(writer)
 
 class TextResponseBuilder:
     def __init__(self):
@@ -118,16 +114,16 @@ def test_404(spider, html_resp_builder):
     assert len(spider.error_writer.cache) == 1
     assert spider.error_writer.cache[0] == "http://domain/, status: 404, parent: parent"
 
+def test_405(spider, html_resp_builder):
+    [_ for _ in spider.parse(html_resp_builder.status(405).build(), parent="parent")]
+    assert len(spider.error_writer.cache) == 0
+
 def test_with_one_link(spider, html_resp_builder):
     requests = [_ for _ in spider.parse(html_resp_builder.link("a", "xxx.html").build())]
     assert len(requests) == 1
     assert requests[0].method == "HEAD"
 
 def test_with_one_external_link(spider, html_resp_builder):
-    requests = [_ for _ in spider.parse(html_resp_builder.link("a", "http://google.com").build())]
-    assert len(requests) == 0
-
-def test_external_spider_with_one_external_link(external_spider, html_resp_builder):
     requests = [_ for _ in spider.parse(html_resp_builder.link("a", "http://google.com").build())]
     assert len(requests) == 1
     assert requests[0].method == "HEAD"
