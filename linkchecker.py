@@ -61,6 +61,8 @@ class LinkCheckerBot:
 
     def all_links(self):
         for uri in list(self._css_links()) + list(self._html_links()):
+            if 'linkedin.com' in uri:
+                continue
             next_page = self.response.urljoin(uri)
             yield next_page
 

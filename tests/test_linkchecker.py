@@ -128,6 +128,10 @@ def test_with_one_external_link(spider, html_resp_builder):
     assert len(requests) == 1
     assert requests[0].method == "HEAD"
 
+def test_with_linkedin_link(spider, html_resp_builder):
+    requests = [_ for _ in spider.parse(html_resp_builder.link("a", "https://www.linkedin.com/in/first_last").build())]
+    assert len(requests) == 0
+
 def test_with_image(spider, html_resp_builder):
     requests = [_ for _ in spider.parse(html_resp_builder.body("<img src='xxx.jpg'/>").build())]
     assert len(requests) == 1
