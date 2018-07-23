@@ -24,7 +24,7 @@ class LinkCheckerParser(scrapy.Spider):
     start_urls = ['https://less.works/']
     #start_urls = ['http://localhost:3000/']
     custom_settings = {
-        'USER_AGENT': "Mozilla/5.0 (Windows; U; Windows NT 5.1; de; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3 LeSS-LinkChecker",
+        'USER_AGENT': "Mozilla/5.0 (Windows; U; Windows NT 5.1; de; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3 LeSS",
         'HTTPERROR_ALLOW_ALL': True
     }
 
@@ -37,7 +37,7 @@ class LinkCheckerParser(scrapy.Spider):
         # linkedin and amazon don't allow HEAD requests
         if response.status == 405:
             yield scrapy.Request(response.url, method="GET", callback=lambda r: self.parse_405(r, parent))
-        elif response.status // 100 != 2:
+        elif response.status // 100 != 2 and response.status != 999:
             self._error(response, parent=parent)
         else:
             if bot.is_unfetched_text() and bot.is_internal_link(response.url):
@@ -46,7 +46,7 @@ class LinkCheckerParser(scrapy.Spider):
             yield scrapy.Request(next_page, method="HEAD", callback=lambda r: self.parse(r, response.url))
 
     def parse_405(self, response, parent=None):
-        if response.status // 100 != 2:
+        if response.status // 100 != 2 and response.status != 999:
             self._error(response, parent=parent)
 
     def _error(self, response, parent=None):
@@ -62,6 +62,8 @@ class LinkCheckerBot:
     def all_links(self):
         for uri in list(self._css_links()) + list(self._html_links()):
             if 'linkedin.com' in uri:
+                continue
+            if 'amazonaws.com' in uri:
                 continue
             next_page = self.response.urljoin(uri)
             yield next_page
