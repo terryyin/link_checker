@@ -24,7 +24,7 @@ class LinkCheckerParser(scrapy.Spider):
     start_urls = ['https://less.works/']
     #start_urls = ['http://localhost:3000/']
     custom_settings = {
-        'USER_AGENT': "Mozilla/5.0 (Windows; U; Windows NT 5.1; de; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3",
+        'USER_AGENT': "Mozilla/5.0 (Windows; U; Windows NT 5.1; de; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3 LeSS-LinkChecker",
         'HTTPERROR_ALLOW_ALL': True
     }
 
