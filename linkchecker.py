@@ -36,22 +36,18 @@ class LinkCheckerParser(scrapy.Spider):
         bot = LinkCheckerBot(response, self.start_urls[0])
         # linkedin and amazon don't allow HEAD requests
         if response.status == 405:
-            yield scrapy.Request(response.url, method="GET", callback=lambda r: self.parse_405(r, parent))
-        elif response.status // 100 != 2 and response.status != 999:
-            self._error(response, parent=parent)
-        else:
+            yield scrapy.Request(response.url, method="GET", callback=lambda r: self._has_error(r, parent))
+        elif not self._has_error(response, parent=parent):
             if bot.is_unfetched_text() and bot.is_internal_link(response.url):
                 yield scrapy.Request(response.url, method="GET", callback=lambda r: self.parse(r, parent))
         for next_page in bot.all_links():
             yield scrapy.Request(next_page, method="HEAD", callback=lambda r: self.parse(r, response.url))
 
-    def parse_405(self, response, parent=None):
+    def _has_error(self, response, parent=None):
         if response.status // 100 != 2 and response.status != 999:
-            self._error(response, parent=parent)
-
-    def _error(self, response, parent=None):
-        self.error_writer("{rsp.url}, status: {rsp.status}, parent: {parent}".format(
-            rsp=response, parent=parent))
+            self.error_writer("{rsp.url}, status: {rsp.status}, parent: {parent}".format(
+                rsp=response, parent=parent))
+            return True
 
 
 class LinkCheckerBot:

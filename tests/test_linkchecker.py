@@ -109,13 +109,36 @@ def test_no_links_200(spider, html_resp_builder):
     assert len(spider.error_writer.cache) == 0
     assert len(requests) == 0
 
+def test_999_http2_ok_status(spider, html_resp_builder):
+    [_ for _ in spider.parse(html_resp_builder.status(999).build(), parent="parent")]
+    assert len(spider.error_writer.cache) == 0
+
 def test_404(spider, html_resp_builder):
     [_ for _ in spider.parse(html_resp_builder.status(404).build(), parent="parent")]
     assert len(spider.error_writer.cache) == 1
     assert spider.error_writer.cache[0] == "http://domain/, status: 404, parent: parent"
 
+def follow_405_request(spider, html_resp_builder):
+    next_requests = [_ for _ in spider.parse(html_resp_builder.status(405).build(), parent="parent")]
+    return next_requests[0]
+
 def test_405(spider, html_resp_builder):
-    [_ for _ in spider.parse(html_resp_builder.status(405).build(), parent="parent")]
+    next_request = follow_405_request(spider, html_resp_builder)
+    assert len(spider.error_writer.cache) == 0
+
+def test_405_followed_by_200(spider, html_resp_builder):
+    next_request = follow_405_request(spider, html_resp_builder)
+    next_request.callback(html_resp_builder.status(200).build())
+    assert len(spider.error_writer.cache) == 0
+
+def test_405_followed_by_401(spider, html_resp_builder):
+    next_request = follow_405_request(spider, html_resp_builder)
+    next_request.callback(html_resp_builder.status(401).build())
+    assert len(spider.error_writer.cache) == 1
+
+def test_405_followed_by_999(spider, html_resp_builder):
+    next_request = follow_405_request(spider, html_resp_builder)
+    next_request.callback(html_resp_builder.status(999).build())
     assert len(spider.error_writer.cache) == 0
 
 def test_with_one_link(spider, html_resp_builder):
