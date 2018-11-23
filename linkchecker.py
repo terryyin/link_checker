@@ -50,6 +50,9 @@ class LinkCheckerParser(scrapy.Spider):
             return True
 
 
+course_and_event_photo_pattern = re.compile(r"\/occasions\/.*?\/photos\/\d+")
+
+
 class LinkCheckerBot:
     def __init__(self, response, start_url):
         self.response = response
@@ -60,6 +63,8 @@ class LinkCheckerBot:
             if 'linkedin.com' in uri:
                 continue
             if 'amazonaws.com' in uri:
+                continue
+            if course_and_event_photo_pattern.search(uri):
                 continue
             next_page = self.response.urljoin(uri)
             yield next_page

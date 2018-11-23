@@ -155,6 +155,10 @@ def test_with_linkedin_link(spider, html_resp_builder):
     requests = [_ for _ in spider.parse(html_resp_builder.link("a", "https://www.linkedin.com/in/first_last").build())]
     assert len(requests) == 0
 
+def test_with_course_and_event_photos_link(spider, html_resp_builder):
+    requests = [_ for _ in spider.parse(html_resp_builder.link("a", "https://less.works/occasions/drinks-and-food-less-drinks-meet-up-after-the-course-145/photos/252?size=medium").build())]
+    assert len(requests) == 0
+
 def test_with_image(spider, html_resp_builder):
     requests = [_ for _ in spider.parse(html_resp_builder.body("<img src='xxx.jpg'/>").build())]
     assert len(requests) == 1
